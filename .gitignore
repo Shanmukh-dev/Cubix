@@ -5,8 +5,12 @@ build/
 dist/
 wheels/
 *.egg-info
+test/
+.cubix/
+test.*
+test.py
+config.json
 
 # Virtual environments
 .venv
 .env
-.cubix/

@@ -52,7 +52,7 @@ class OpenAIProvider(LLMProvider):
             instructions += f"\n### **Current Working Directory (CWD)**: **`{self.state.get_cwd()}`**"
             instructions+= f"\n### **Current platform (OS)**: **`{platform()}`**"
             conversation.insert(0, self.system_message(instructions))
-            print(conversation[0]["content"])
+            # print(conversation[0]["content"])
             # print(json.dumps(conversation, indent=2))
 
             stream = self.model.chat.completions.create(
@@ -152,8 +152,16 @@ class OpenAIProvider(LLMProvider):
     def user_message(self, content):
         return {"role": "user", "content": content}
 
-    def assistant_message(self, content):
-        return {"role": "assistant", "content": content}
+    def assistant_message(self, content: str = "", tool_calls: list[dict] = []):
+        tool_call_message = [{"id": tc["id"], 
+                              "type": "function",
+                              "function": {  
+                                "name": tc["name"], 
+                                "arguments": tc["arguments"]
+                              }
+                              } 
+                              for tc in tool_calls.values()]
+        return {"role": "assistant", "content": content, "tool_calls": tool_call_message}
     
     def system_message(self, content):
         return {"role": "system", "content": content}

@@ -263,9 +263,11 @@ def tool_mode():
         if not result:
             break
         llm_response = result["response"]
-        if llm_response:
-            state.messages.append(ai.model.assistant_message(llm_response))
-            state.update_moemory()
+        tool_calls = result["tool_calls"]
+        # tool_call_message = [{"id": tc["id"], "name": tc["name"], "arguments": json.loads(tc["arguments"])} for tc in tool_calls.values()]
+        state.messages.append(ai.model.assistant_message(llm_response,tool_calls))
+        state.update_moemory()
+        # if llm_response:
         # spinner.hide()
     if len(state.messages) >= 50:
         time.sleep(5)
@@ -278,7 +280,7 @@ def tool_mode():
 
 
 if __name__ == "__main__":
-    print(json.dumps(state.available_skills, indent=2))
+    # print(json.dumps(state.available_skills, indent=2))
     while True:
 
         prompt = tui.multiline_input("> ").strip()
@@ -316,26 +318,48 @@ if __name__ == "__main__":
             result = asyncio.run(ai.run_model())
             tui.show_cursor()
         except openai.AuthenticationError:
-            print(Color.c("\nAuthentication failed.", fg="red"))
-            print("Use /login to set api key\n")
-            continue
+            print_agent_message(Color.c("\nAuthentication failed.", fg="red"), "\nUse /login to set api key")
+            # print()
+            break
+        except openai.RateLimitError:
+            print_agent_message(Color.c("\nRate limit exceeded. Please try again later.", fg="red"))
+            break
+        except openai.APITimeoutError:
+            print_agent_message(Color.c("\nAPI request timed out. Please try again.", fg="red"))
+            break
+        except openai.APIError:
+            print_agent_message(Color.c("\nAPI error occurred. Please try again.", fg="red"))
+            break
+        except openai.APIConnectionError:
+            print_agent_message(Color.c("\nNetwork error occurred. Please check your connection and try again.", fg="red"))
+            break
+        except openai.InvalidRequestError:
+            print_agent_message(Color.c("\nInvalid request. Please check your input and try again.", fg="red"))
+            break
+        except openai.APIStatusError as e:
+            print_agent_message(Color.c(f"\nAPI status error: {str(e)}. Please try again later.", fg="red"))
+            break
+
         except KeyboardInterrupt:
             print(Color.c("\nAgent Stopped\n", fg="#FF0000"))
             state.current_execution_mode = "idle"
             state.reset_action_history()
             state.current_tool_calls = {}
             tui.show_cursor()
-            continue
+            break
+        except Exception as e:
+            print_agent_message(Color.c(f"\nAn unexpected error occurred: {str(e)}", fg="red"))
+            break
+
 
         if not result:
             continue
         llm_response = result["response"]
-        # if llm_response == "stopped by user":
-        #     continue
         tool_calls = result["tool_calls"]
-        if llm_response:
-            state.messages.append(ai.model.assistant_message(llm_response))
-            state.update_moemory()
+        # tool_call_message = [{"id": tc["id"], "name": tc["name"], "arguments": json.loads(tc["arguments"])} for tc in tool_calls.values()]
+        state.messages.append(ai.model.assistant_message(llm_response,tool_calls))
+        state.update_moemory()
+        # if llm_response:
 
         if state.current_execution_mode == "tool":
             tool_mode()

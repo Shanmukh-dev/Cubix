@@ -204,14 +204,20 @@ def bash(state: AgentState, cmd: str) -> str:
         error_msg = f"ERROR Tool - bash: {err}"
         state.current_action_history += f"- Bash error for command {cmd}: {err}\n"
 
-def plan_tool(state:AgentState, goal:str, tasks:list[str]):
-    if not goal or not tasks:
-        msg = "ERROR Tool - plan_tool: Goal or tasks not provided"
-        state.current_action_history += f"- Plan tool failed: goal or tasks not provided\n"
+def read_skill(state: AgentState, skill_name: str) -> str:
+    skill = next((s for s in state.available_skills if s["name"] == skill_name), None)
+    if not skill:
+        msg = f"Skill {skill_name} not found."
+        state.current_action_history += f"- Read skill failed: {skill_name} not found\n"
         return msg
-    state.plan["goal"] = goal
-    state.plan["steps"] = tasks
-    state.reset_action_history()
 
-    state.current_action_history = state.current_action_history.format(prompt=goal)
-    return f"Plan tool executed successfully. Goal: {goal}"
+    try:
+        with open(os.path.join(skill["path"], "SKILL.md"), "r", encoding="utf-8") as f:
+            content = f.read()
+            result = f"Skill: {skill_name}\nSkill Locaation: {skill["path"]}\n{content}"
+            state.current_action_history += f"- Read skill {skill_name} successfully\n"
+            return result
+    except Exception as err:
+        error_msg = f"ERROR Tool - read_skill: {err}"
+        state.current_action_history += f"- Read skill error for {skill_name}: {err}\n"
+        return error_msg

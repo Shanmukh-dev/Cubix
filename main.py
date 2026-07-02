@@ -51,6 +51,13 @@ Your job is to implement changes directly.
 - make_directory:- Description: Creates a new directory at the given path if it does not already exist.; Required params: {path: <the path of the directory>}
 - list_directory:- Description: Lists all the files and directories at a given path (path of a directory), if the path exists..; Required params: {path: <the path of the directory>}
 - bash:- Description: Executes a shell command in the current working directory.; Required params: {cmd: <the command to run>}
+- read_skill:- Description: Reads the skills from the skills directory and returns a list of skills.; Required params: {skill_name: <name of the skill>}
+
+## Skill usage
+- Skills are pre-defined instruction that help you perform specific tasks.
+- You may be provided with a list skills with their names and descriptions of their purpose.
+- Use the read_skills tool to read the skills and use them in your response if they are relevant to the user's query.
+- Running any commnds listed in a skill requires you to include the `cd <path of the skill> && <command>` in the bash tool.
 
 ## Rules
 - While usingt the bash tool, execute commands that are completely non-interactive, i.e. the command must execute without waiting any other user input, all the required inputs must be provided in the command itself. Always pass -y, --yes flags wherever necessary. Commands that require user input will hang and fail.
@@ -65,17 +72,19 @@ model = state.available_models[3]
 
 tool_list = [
     Tool(func=read, name="read", description="Reads the specified file path.",
-         param_descriptions={"path": "path of the file"}),
+         param_descriptions={"fname": "path of the file"}),
     Tool(func=write, name="write", description="Writes content to the specified file path. Creates the file if it does not exist.",
-         param_descriptions={"path": "path of the file", "content": "the content to be written in the file"}),
+         param_descriptions={"fname": "path of the file", "content": "the content to be written in the file"}),
     Tool(func=edit, name="edit", description="Replaces a target section of a file with new content.", param_descriptions={
-         "path": "path of the file", "target": "the section of the file to be replaced", "patch": "the new content to replace the target"}),
+         "fname": "path of the file", "target": "the section of the file to be replaced", "patch": "the new content to replace the target"}),
     Tool(func=make_directory, name="make_directory", description="Creates a new directory at the given path if it does not already exist.",
          param_descriptions={"path": "the path of the directory"}),
     Tool(func=list_directory, name="list_directory", description="Lists all the files and directories at a given path (path of a directory), if the path exists.",
          param_descriptions={"path": "the path of the directory"}),
     Tool(func=bash, name="bash", description="Executes a shell command in the current working directory.",
          param_descriptions={"cmd": "the command to run"}),
+    Tool(func=read_skill, name="read_skill", description="Reads the skills from the skills directory and returns a list of skills.",
+         param_descriptions={"skill_name": "name of the skill"}),
 ]
 
 
@@ -124,7 +133,7 @@ def parse_commands(query: str):
             parts = query.split(" ", 1)
             cwd = parts[1].strip() if len(parts) > 1 else ""
             if not cwd:
-                print_agent_message("Usage: !cd <path>")
+                print_agent_message("Usage: !cd <path> to select a working directory first.")
             elif is_path_exists(cwd):
                 state.set_cwd(cwd)
                 print_agent_message(f"Cwd set to: {cwd}")
@@ -147,20 +156,20 @@ def parse_commands(query: str):
         elif p == "exit":
             return
         elif p == "get-cwd":
-            print(Color.c(state.get_cwd(), fg="cyan"))
+            print_agent_message(Color.c(state.get_cwd(), fg="cyan"))
         elif p == "clear":
             tui.init_ui()
         elif p == "compact":
             if len(state.messages) >= 50:
                 compact()
-            print(Color.c("✔ No compaction needed", fg="green"))
+            print_agent_message(Color.c("✔ No compaction needed", fg="green"))
         elif p == "login":
             with open("config.json") as f:
                 data = dict(json.load(f))
             provider_list = (data["providers"]).keys()
             selected_provider = tui.select_provider(provider_list)
             if selected_provider:
-                print(f"Provider: {selected_provider}")
+                print_agent_message(f"Provider: {selected_provider}")
                 api_key = input("Enter API key: ").strip()
                 if api_key:
                     data["providers"][selected_provider]["apikey"] = api_key
@@ -169,14 +178,14 @@ def parse_commands(query: str):
                         json.dump(data, f, indent=2)
                     # state.load_config()
                     ai.set_model(model)
-                    print(Color.c("Login successful", fg="green"))
+                    print_agent_message(Color.c("Login successful", fg="green"))
         elif p == "add-model":
             with open("config.json") as f:
                 data = dict(json.load(f))
             provider_list = (data["providers"]).keys()
             selected_provider = tui.select_provider(provider_list)
             if selected_provider:
-                print(f"Provider: {selected_provider}")
+                print_agent_message(f"Provider: {selected_provider}")
                 id = input("Enter model-id: ").strip()
                 if id:
                     data["available_models"].append(
@@ -188,11 +197,11 @@ def parse_commands(query: str):
                         Color.c(f"Model {selected_provider}/{id} added successfully.", fg="greeen"))
         elif p == "load-session":
             if not state.get_cwd():
-                print(Color.c("\nPlease select a directory first.\n", fg="yellow"))
+                print_agent_message(Color.c("\nPlease select a directory first.\n", fg="yellow"))
             memory_path = os.path.join(state.get_cwd(), ".cubix")
             session_list = []
             if not os.path.isdir(memory_path):
-                print(Color.c("\nNo sessioins yet in this project\n", fg="#98c7ff"))
+                print_agent_message(Color.c("\nNo sessioins yet in this project\n", fg="#98c7ff"))
                 return
             for session in os.listdir(memory_path):
                 with open(os.path.join(memory_path, session)) as f:
@@ -224,7 +233,7 @@ def parse_commands(query: str):
                     print_agent_message(msg["content"])
         elif p == "new-session":
             if not state.get_cwd():
-                print(Color.c("\nPlease select a directory first.\n", fg="yellow"))
+                print_agent_message(Color.c("\nPlease select a directory first.\n", fg="yellow"))
             tui.init_ui()
             state.new_session()
 
@@ -269,7 +278,9 @@ def tool_mode():
 
 
 if __name__ == "__main__":
+    print(json.dumps(state.available_skills, indent=2))
     while True:
+
         prompt = tui.multiline_input("> ").strip()
 
         if prompt == "/exit":

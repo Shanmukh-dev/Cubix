@@ -32,20 +32,27 @@ class OpenAIProvider(LLMProvider):
 
         # print(json.dumps(self.tool_declarations, indent=2))
 
-    async def call_model(self, instructions: str, conversation: list[dict], print_output: bool = True, tool_use: bool = True):
+    async def call_model(self, instructions: str, conversation: list[dict], skills: list[dict] = [], print_output: bool = True, tool_use: bool = True):
         try:
             self.state.load_memory()
-            # if len(self.state.messages) == 0:
-            #     conversation.append(
-            #         self.system_message(instructions))
-            # if self.state.messages[0]["role"] != "system":
-            #     conversation.insert(
-            #         0, self.system_message(instructions))
+            if skills:
+                skill_list = "## Available Skills:\n"
+
+                for skill in skills:
+                    skill_list += f"""
+<skill>
+    <name>{skill["name"]}</name>
+    <description>{skill["description"]}</description>
+</skill>
+\n"""
+                instructions += f"\n{skill_list}\n"
+                
 
 
             instructions += f"\n### **Current Working Directory (CWD)**: **`{self.state.get_cwd()}`**"
             instructions+= f"\n### **Current platform (OS)**: **`{platform()}`**"
             conversation.insert(0, self.system_message(instructions))
+            print(conversation[0]["content"])
             # print(json.dumps(conversation, indent=2))
 
             stream = self.model.chat.completions.create(
@@ -115,11 +122,13 @@ class OpenAIProvider(LLMProvider):
                                     "edit": "Editing",
                                     "make_directory": "Creating directory",
                                     "list_directory": "List directroy",
-                                    "bash": "Running command:"
+                                    "bash": "Running command:",
+                                    "read_skill": "Reading skill:"
                                 }
                                 m = (re.search(r'"fname"\s*:\s*"([^"]+)"', tool_calls[idx]["arguments"])
                                      or re.search(r'"path"\s*:\s*"([^"]+)"', tool_calls[idx]["arguments"])
                                      or re.search(r'"cmd"\s*:\s*"([^"]+)"', tool_calls[idx]["arguments"])
+                                     or re.search(r'"skill_name"\s*:\s*"([^"]+)"', tool_calls[idx]["arguments"])
                                     )
                                 if m and print_output:
                                     tool_call_announced[idx]["message"] = f"{name_to_message[name]} {m.group(1)}"

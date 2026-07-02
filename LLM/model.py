@@ -61,7 +61,7 @@ class Model:
             return
 
         first_user_message_index = self.state.messages.index(next(filter(lambda msg: msg["role"] == "user", self.state.messages)))
-        result = await self.model.call_model(self.intructions, self.state.messages + [actionHistory])
+        result = await self.model.call_model(self.intructions, self.state.messages + [actionHistory], skills=self.state.available_skills,)
         # if result["response"] == "Sropped By u"
         if result["tool_calls"]:
             self.state.current_execution_mode = "tool"
@@ -105,7 +105,7 @@ class Model:
             instructions="",
             conversation=old_messages,
             print_output=False,
-            tool_use = False
+            tool_use = False,
             )
 
         return result

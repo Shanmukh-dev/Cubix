@@ -5,6 +5,8 @@ from pathlib import Path
 import json
 # from Session import Session
 from uuid import uuid4
+import yaml
+
 
 
 class StateMessage(TypedDict):
@@ -28,6 +30,8 @@ class AgentState:
         self.current_action_history = "Current goal: {prompt}\nCurrent action history:\n"
         self.available_providers = {}
         self.available_models = []
+        self.available_skills = []
+        self.load_skills()
         self.load_config()
 
 
@@ -149,6 +153,30 @@ class AgentState:
             self.available_models = data["available_models"]
             self.available_providers = data["providers"]
         # print("Session loaded successfully")
+
+    def load_skills(self):
+        home = Path.home()
+
+        skill_dir= home / ".agents" / "skills"
+
+        for path in os.listdir(skill_dir):
+            skill = skill_dir / path / "SKILL.md"
+
+            with open(skill) as f:
+                data = f.read()
+
+                frontmatter = data.split("---", 2)[1]
+
+                skill_matter = yaml.safe_load(frontmatter)
+
+                skill_matter["path"] = str(skill_dir / path)
+                self.available_skills.append(skill_matter)
+        
+
+
+
+            
+
 
 
 

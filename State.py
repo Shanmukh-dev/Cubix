@@ -171,6 +171,13 @@ class AgentState:
 
                 skill_matter["path"] = str(skill_dir / path)
                 self.available_skills.append(skill_matter)
+
+    def cleanUP(self):
+        if len(self.messages) > 0:
+            self.update_moemory()
+        else:
+            if os.path.exists(os.path.join(self.cwd, self.project_memory)):
+                os.remove(os.path.join(self.cwd, self.project_memory))
         
 
 

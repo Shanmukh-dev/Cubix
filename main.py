@@ -11,6 +11,7 @@ from frontend.tui import *
 import threading
 import openai
 import time
+import subprocess
 
 
 # loading configuration
@@ -115,6 +116,9 @@ def is_path_exists(path: str) -> bool:
 def print_agent_message(msg: str = ""):
     print(f"\n{Color.c("• Cubix:", fg=tui.accent_color)}\n{msg}\n")
 
+def user_bash(cwd:str, cmd: str):
+   subprocess.run(cmd, shell=True, cwd = cwd)
+   return f"Executed command: {cmd}"
 
 def compact():
     old_messages = state.messages[:-19]
@@ -140,9 +144,15 @@ def parse_commands(query: str):
             else:
                 print_agent_message("The provided path does not exist.")
         else:
-            cmd = query[1:]
-            output = bash(state, cmd)
-            print_agent_message(output)
+            if state.get_cwd():
+                cmd = query[1:]
+                output = user_bash(state.get_cwd(), cmd)
+                print_agent_message(output)
+            else:
+                print_agent_message(Color.c("Please select a working directory using '!cd <directory-path>' to start coding.", fg = "yellow"))
+            # cmd = query[1:]
+            # output = user_bash(cmd)
+            # print_agent_message(output)
 
     if prompt.startswith("/"):
         # nonlocal model
@@ -287,6 +297,7 @@ if __name__ == "__main__":
 
         if prompt == "/exit":
             Color.clear_screen()
+            state.cleanUP()
             break
 
         if not prompt:

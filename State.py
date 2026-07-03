@@ -103,7 +103,7 @@ class AgentState:
         self.messages = []
 
     def load_config(self):
-        if not os.path.exists("config.json"):
+        if not os.path.exists(Path.home() / ".cubix" / "config.json"):
             data = {
                 "providers": {
                     "nvidia-nim": {
@@ -143,7 +143,7 @@ class AgentState:
                     "groq/qwen/qwen3.6-27b"
                 ]
             }
-            with open("config.json", "w") as f:
+            with open(Path.home() / ".cubix" / "config.json", "w") as f:
                 json.dump(data, f, indent=2)
             self.available_models = data["available_models"]
             self.available_providers = data["providers"]

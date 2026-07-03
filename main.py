@@ -174,7 +174,7 @@ def parse_commands(query: str):
                 compact()
             print_agent_message(Color.c("✔ No compaction needed", fg="green"))
         elif p == "login":
-            with open("config.json") as f:
+            with open(Path.home() / ".cubix" / "config.json") as f:
                 data = dict(json.load(f))
             provider_list = (data["providers"]).keys()
             selected_provider = tui.select_provider(provider_list)
@@ -184,13 +184,13 @@ def parse_commands(query: str):
                 if api_key:
                     data["providers"][selected_provider]["apikey"] = api_key
                     state.available_providers = data["providers"]
-                    with open("config.json", "w") as f:
+                    with open(Path.home() / ".cubix" / "config.json", "w") as f:
                         json.dump(data, f, indent=2)
                     # state.load_config()
                     ai.set_model(model)
                     print_agent_message(Color.c("Login successful", fg="green"))
         elif p == "add-model":
-            with open("config.json") as f:
+            with open(Path.home() / ".cubix" / "config.json") as f:
                 data = dict(json.load(f))
             provider_list = (data["providers"]).keys()
             selected_provider = tui.select_provider(provider_list)
@@ -200,7 +200,7 @@ def parse_commands(query: str):
                 if id:
                     data["available_models"].append(
                         f"{selected_provider}/{id}")
-                    with open("config.json", "w") as f:
+                    with open(Path.home() / ".cubix" / "config.json", "w") as f:
                         json.dump(data, f, indent=2)
                     state.available_models = data["available_models"]
                     print(

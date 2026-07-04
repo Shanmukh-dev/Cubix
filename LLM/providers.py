@@ -52,6 +52,10 @@ class OpenAIProvider(LLMProvider):
             instructions += f"\n### **Current Working Directory (CWD)**: **`{self.state.get_cwd()}`**"
             instructions+= f"\n### **Current platform (OS)**: **`{platform()}`**"
             conversation.insert(0, self.system_message(instructions))
+            if os.path.exists(os.path.join(self.state.get_cwd(), "AGENTS.md")):
+                with open(os.path.join(self.state.get_cwd(), "AGENTS.md")) as f:
+                    agents_md = f.read()
+                conversation.insert(1, self.system_message(f"### **AGENTS.md**:\n{agents_md}"))
             # print(conversation[0]["content"])
             # print(json.dumps(conversation, indent=2))
 

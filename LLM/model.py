@@ -32,14 +32,22 @@ class Model:
         
         if provider in self.state.available_providers:
             try:
-                self.model = self.provider_class(
-                    model_id=self.model_id, 
-                    apikey=self.state.available_providers[provider]["apikey"],
-                    base_url=self.state.available_providers[provider]["base_url"],  
-                    state=self.state, 
-                    tool_list=self.tool_list)
-            
-                print(f"Model initialized with Provider: {provider} and Model: {self.model_id}")
+                base_url = self.state.available_providers[provider]["base_url"]
+                apikey = self.state.available_providers[provider]["apikey"]
+                print(apikey)
+                if apikey:
+                    self.model = self.provider_class(
+                        model_id=self.model_id, 
+                        apikey=apikey,
+                        base_url=base_url,  
+                        state=self.state, 
+                        tool_list=self.tool_list)
+                
+                    print(f"Model initialized with Provider: {provider} and Model: {self.model_id}")
+                else:
+                    self.model = None
+                    print(Color.c("Provider unvailable", fg="red"))
+                    print(f"Please use /login login before using the provider {provider}")
             except openai.OpenAIError:
                 self.model = None
                 print(Color.c("Provider unvailable", fg="red"))
@@ -76,13 +84,28 @@ class Model:
         provider, id = id.split("/", 1)
         self.model_id = id
         self.provider = provider
-        self.model = self.provider_class(
-            model_id=self.model_id, 
-            apikey=self.state.available_providers[provider]["apikey"],
-            base_url=self.state.available_providers[provider]["base_url"],
-            tool_list=self.tool_list,
-            state=self.state)
-        print(f"Model changed to Provider: {provider} and Model: {self.model_id}")
+        try:
+            base_url = self.state.available_providers[provider]["base_url"]
+            apikey = self.state.available_providers[provider]["apikey"]
+            print(apikey)
+            if apikey:
+                self.model = self.provider_class(
+                    model_id=self.model_id, 
+                    apikey=apikey,
+                    base_url=base_url,  
+                    state=self.state, 
+                    tool_list=self.tool_list)
+            
+                print(f"Model initialized with Provider: {provider} and Model: {self.model_id}")
+            else:
+                self.model = None
+                print(Color.c("Provider unvailable", fg="red"))
+                print(f"Please use /login login before using the provider {provider}")
+            print(f"Model changed to Provider: {provider} and Model: {self.model_id}")
+        except openai.OpenAIError:
+            self.model = None
+            print(Color.c("Provider unvailable", fg="red"))
+            print(f"Please use /login login before using the provider {provider}")
 
     async def compact_messages(self, messages):
 

@@ -188,6 +188,7 @@ def parse_commands(query: str):
                         json.dump(data, f, indent=2)
                     # state.load_config()
                     ai.set_model(model)
+                    state.load_config()
                     print_agent_message(Color.c("Login successful", fg="green"))
         elif p == "add-model":
             with open(Path.home() / ".cubix" / "config.json") as f:
@@ -203,6 +204,7 @@ def parse_commands(query: str):
                     with open(Path.home() / ".cubix" / "config.json", "w") as f:
                         json.dump(data, f, indent=2)
                     state.available_models = data["available_models"]
+                    state.load_config()
                     print(
                         Color.c(f"Model {selected_provider}/{id} added successfully.", fg="greeen"))
         elif p == "load-session":

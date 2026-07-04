@@ -292,8 +292,11 @@ def tool_mode():
 if __name__ == "__main__":
     # print(json.dumps(state.available_skills, indent=2))
     while True:
+        try:
 
-        prompt = tui.multiline_input("> ").strip()
+            prompt = tui.multiline_input("> ").strip()
+        except KeyboardInterrupt:
+            break
 
         if prompt == "/exit":
             Color.clear_screen()

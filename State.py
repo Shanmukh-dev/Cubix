@@ -148,7 +148,7 @@ class AgentState:
             self.available_models = data["available_models"]
             self.available_providers = data["providers"]
         else:
-            with open("config.json") as f:
+            with open(Path.home() / ".cubix" / "config.json") as f:
                 data = dict(json.load(f))
             self.available_models = data["available_models"]
             self.available_providers = data["providers"]

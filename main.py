@@ -274,6 +274,9 @@ def tool_mode():
             break
         if not result:
             break
+        if result["error"]:
+            print(Color.c(result["error"], fg="red"), "\nTry again later")
+            return
         llm_response = result["response"]
         tool_calls = result["tool_calls"]
         # tool_call_message = [{"id": tc["id"], "name": tc["name"], "arguments": json.loads(tc["arguments"])} for tc in tool_calls.values()]
@@ -369,6 +372,9 @@ if __name__ == "__main__":
 
 
         if not result:
+            continue
+        if result["error"]:
+            print(Color.c(result["error"], fg="red"), "\nTry again later.")
             continue
         llm_response = result["response"]
         tool_calls = result["tool_calls"]

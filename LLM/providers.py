@@ -6,6 +6,7 @@ import sys
 import time
 
 from openai import OpenAI
+import openai
 from platform import platform
 import os
 import inspect
@@ -146,11 +147,19 @@ class OpenAIProvider(LLMProvider):
             return {
                 "response": llm_response,
                 "tool_calls": tool_calls,
+                "error": ""
+            }
+        except openai.APIError as e:
+            return {
+                "response": "",
+                "tool_calls": [],
+                "error": str(e),
             }
         except KeyboardInterrupt:
             return {
-                "response": "stopped by user",
-                "tool_calls": []
+                "response": "",
+                "tool_calls": [],
+                "error": "Agent Stopped"
             }
 
     def user_message(self, content):

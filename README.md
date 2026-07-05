@@ -26,6 +26,7 @@ powershell -c "irm https://cubix-agent.vercel.app/install.ps1 | iex"
 ```
 
 ## Usage
+- Run `cubix` in your terminal to start the agent. If your terminal is Powershell, make sure running scripts in enabled on your machine.
 
 - **Login** - Use the `/login` To set up api key any of your preffered providers from the list.
 

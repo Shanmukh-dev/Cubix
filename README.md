@@ -17,12 +17,12 @@ Copy paste the following commands to install Cubix <br>
 
 **Using Curl:** <br>
 ```
-<Curl command>
+curl -fsSL https://cubix-agent.vercel.app/install.sh | sh
 ```
 
 **Using Powershell:** <br>
 ```
-<Powershell command>
+powershell -c "irm https://cubix-agent.vercel.app/install.ps1 | iex"
 ```
 
 ## Usage
@@ -41,6 +41,7 @@ Shell commands can be executed directly from the agent prompt interface by start
 - `/get-cwd` - Returns the current working directory path.
 - `/new-session` - Starts a new chat session.
 - `/load-session` - Used to load a previous chat session
+- `/add-model` - Used to add your preffered model from any of the available providers.
 - `/compact` - Used to summarize the current session messages and tool_calls performed. Automatically triggered after a certain threshold number of active messages.
 - `/login` - Used to set up api key for a provider from the list of providers
 - `/clear` - Clears the terminal.

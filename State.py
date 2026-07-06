@@ -156,6 +156,8 @@ class AgentState:
 
     def load_skills(self):
         home = Path.home()
+        if not os.path.isdir(home / ".agents") or not os.path.isdir(home / ".agents" / "skills"):
+            return
 
         skill_dir= home / ".agents" / "skills"
 

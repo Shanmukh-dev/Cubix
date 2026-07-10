@@ -1,2 +1,2 @@
-cd ~/.cubix/Cubix
-uv run main.py
+# cd ~/.cubix/Cubix
+uv run ~/.cubix/Cubix/main.py

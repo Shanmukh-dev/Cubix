@@ -3,6 +3,9 @@ from pathlib import Path
 from subprocess import PIPE, Popen, STDOUT, DEVNULL
 import threading
 import time
+import requests
+from bs4 import BeautifulSoup
+from ddgs import DDGS
 
 from State import AgentState
 
@@ -214,10 +217,65 @@ def read_skill(state: AgentState, skill_name: str) -> str:
     try:
         with open(os.path.join(skill["path"], "SKILL.md"), "r", encoding="utf-8") as f:
             content = f.read()
-            result = f"Skill: {skill_name}\nSkill Locaation: {skill["path"]}\n{content}"
+            result = f"Skill: {skill_name}\nSkill Locaation: {skill["path"]}\nIf the skill refernces to anything using a relative path like `./something` then interpret it as relatinve the the skill directory ({skill["path"]}) and the not the current working directory.\n{content}"
             state.current_action_history += f"- Read skill {skill_name} successfully\n"
             return result
     except Exception as err:
         error_msg = f"ERROR Tool - read_skill: {err}"
         state.current_action_history += f"- Read skill error for {skill_name}: {err}\n"
         return error_msg
+
+
+def web_fetch(state: AgentState, url: str, timeout:int = 10):
+    headers = {
+        "User-Agent": "Mozzila/5.0"
+    }
+
+    try:
+        respose = requests.get(headers=headers, url=url, timeout = timeout)
+
+        respose.raise_for_status()
+
+        soup = BeautifulSoup(respose.text, "html.parser")
+
+        for element in soup(["script", "style", "nav", "header", "footer"]):
+            element.decompose()
+
+        text = soup.get_text(separator="\n")
+        cleaned = [lines.strip() for lines in text.splitlines() if lines.strip()]
+        msg = f"Web fetch url: {url}\n"
+        content = "\n".join(cleaned)
+
+        msg += content[:min(len(content), 8000)]
+        
+
+        state.current_action_history += f"- Web fetch for `{url}` successfully.\n"
+        return msg
+
+
+    except TimeoutError:
+        msg = f"web_fetch error - url: {url} timed out."
+        state.current_action_history += "- " + msg + "\n"
+        return msg
+    except Exception as e:
+        msg = f"web_fetch error: {str(e)}"
+        state.current_action_history += "- " + msg + "\n"
+        return msg
+
+def web_search(state: AgentState, query: str, max_results: int = 10):
+    try:
+        with DDGS() as ddgs:
+            searches = list(
+                ddgs.text(query, max_results = max_results)
+            )
+        msg = f"Web search results for '{query}'\n\n"
+
+        for search in searches:
+            msg += f"## {search["title"]}\n**Url**: `{search["href"]}`\n{search["body"]}\n\n"
+            state.current_action_history += f"- Web search for `{query}` successfully.\n"
+        
+        return msg
+    except Exception as e:
+        msg = f"Web search ERROR: {str(e)}"
+        state.current_action_history += f"- Web search for `{query}` Errored.\n"
+        return msg

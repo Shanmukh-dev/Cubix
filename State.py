@@ -6,7 +6,7 @@ import json
 # from Session import Session
 from uuid import uuid4
 import yaml
-
+import requests
 
 
 class StateMessage(TypedDict):
@@ -32,6 +32,7 @@ class AgentState:
         self.available_models = []
         self.available_skills = []
         self.load_skills()
+        # self.load_project_skills()
         self.load_config()
 
 
@@ -44,6 +45,8 @@ class AgentState:
         else:
             self.load_memory()
             print("Memory Loaded Successfully")
+
+        self.load_project_skills()
 
     def get_cwd(self) -> str:
         return self.cwd
@@ -119,39 +122,45 @@ class AgentState:
                         "base_url": "https://api.groq.com/openai/v1"
                     }
                 },
-                "available_models": [
-                    "nvidia-nim/z-ai/glm-5.1",
-                    "nvidia-nim/deepseek-ai/deepseek-v4-flash",
-                    "nvidia-nim/deepseek-ai/deepseek-v4-pro",
-                    "nvidia-nim/openai/gpt-oss-120b",
-                    "nvidia-nim/nvidia/nemotron-3-ultra-550b-a55b",
-                    "groq/llama-3.1-8b-instant",
-                    "groq/llama-3.3-70b-versatile",
-                    "groq/openai/gpt-oss-120b",
-                    "groq/openai/gpt-oss-20b",
-                    "groq/whisper-large-v3",
-                    "groq/whisper-large-v3-turbo",
-                    "groq/compound",
-                    "groq/compound-mini",
-                    "groq/canopylabs/orpheus-arabic-saudi",
-                    "groq/canopylabs/orpheus-v1-english",
-                    "groq/meta-llama/llama-4-scout-17b-16e-instruct",
-                    "groq/meta-llama/llama-prompt-guard-2-22m",
-                    "groq/meta-llama/llama-prompt-guard-2-86m",
-                    "groq/openai/gpt-oss-safeguard-20b",
-                    "groq/qwen/qwen3-32b",
-                    "groq/qwen/qwen3.6-27b"
-                ]
+                # "available_models": [
+                #     "nvidia-nim/z-ai/glm-5.2",
+                #     "nvidia-nim/deepseek-ai/deepseek-v4-flash",
+                #     "nvidia-nim/deepseek-ai/deepseek-v4-pro",
+                #     "nvidia-nim/openai/gpt-oss-120b",
+                #     "nvidia-nim/nvidia/nemotron-3-ultra-550b-a55b",
+                #     "groq/llama-3.1-8b-instant",
+                #     "groq/llama-3.3-70b-versatile",
+                #     "groq/openai/gpt-oss-120b",
+                #     "groq/openai/gpt-oss-20b",
+                #     "groq/whisper-large-v3",
+                #     "groq/whisper-large-v3-turbo",
+                #     "groq/compound",
+                #     "groq/compound-mini",
+                #     "groq/canopylabs/orpheus-arabic-saudi",
+                #     "groq/canopylabs/orpheus-v1-english",
+                #     "groq/meta-llama/llama-4-scout-17b-16e-instruct",
+                #     "groq/meta-llama/llama-prompt-guard-2-22m",
+                #     "groq/meta-llama/llama-prompt-guard-2-86m",
+                #     "groq/openai/gpt-oss-safeguard-20b",
+                #     "groq/qwen/qwen3-32b",
+                #     "groq/qwen/qwen3.6-27b"
+                # ]
             }
             with open(Path.home() / ".cubix" / "config.json", "w") as f:
                 json.dump(data, f, indent=2)
-            self.available_models = data["available_models"]
+            # self.available_models = data["available_models"]
             self.available_providers = data["providers"]
         else:
             with open(Path.home() / ".cubix" / "config.json") as f:
                 data = dict(json.load(f))
-            self.available_models = data["available_models"]
+            # self.available_models = data["available_models"]
             self.available_providers = data["providers"]
+        for provider in self.available_providers:
+            prov = self.available_providers[provider]
+            if prov["apikey"]:
+                res = requests.get(prov["base_url"] + "/models", headers={"Authorization": f"Bearer {prov['apikey']}"})
+                model_list = [f"{provider}/{model['id']}" for model in res.json().get("data", [])]
+                self.available_models.extend(model_list)
         # print("Session loaded successfully")
 
     def load_skills(self):
@@ -159,10 +168,9 @@ class AgentState:
         if not os.path.isdir(home / ".agents") or not os.path.isdir(home / ".agents" / "skills"):
             return
 
-        skill_dir= home / ".agents" / "skills"
-
-        for path in os.listdir(skill_dir):
-            skill = skill_dir / path / "SKILL.md"
+        global_skill_dir = home / ".agents" / "skills"
+        for path in os.listdir(global_skill_dir):
+            skill = global_skill_dir / path / "SKILL.md"
 
             with open(skill) as f:
                 data = f.read()
@@ -171,7 +179,26 @@ class AgentState:
 
                 skill_matter = yaml.safe_load(frontmatter)
 
-                skill_matter["path"] = str(skill_dir / path)
+                skill_matter["path"] = str(global_skill_dir / path)
+                self.available_skills.append(skill_matter)
+        print(self.available_skills)
+
+    def load_project_skills(self):
+
+        local_skill_dir = os.path.join(self.cwd, ".cubix/skills")
+        if not os.path.isdir(local_skill_dir):
+            return
+        for path in os.listdir(local_skill_dir):
+            skill = local_skill_dir / path / "SKILL.md"
+
+            with open(skill) as f:
+                data = f.read()
+
+                frontmatter = data.split("---", 2)[1]
+
+                skill_matter = yaml.safe_load(frontmatter)
+
+                skill_matter["path"] = str(local_skill_dir / path)
                 self.available_skills.append(skill_matter)
 
     def cleanUP(self):

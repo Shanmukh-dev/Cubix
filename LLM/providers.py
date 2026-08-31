@@ -128,7 +128,9 @@ class OpenAIProvider(LLMProvider):
                                     "make_directory": "Creating directory",
                                     "list_directory": "List directroy",
                                     "bash": "Running command:",
-                                    "read_skill": "Reading skill:"
+                                    "read_skill": "Reading skill:",
+                                    "web_fetch": "Web Fetch:",
+                                    "web_search": "Searchin the web for:"
                                 }
                                 m = (re.search(r'"fname"\s*:\s*"([^"]+)"', tool_calls[idx]["arguments"])
                                      or re.search(r'"path"\s*:\s*"([^"]+)"', tool_calls[idx]["arguments"])
@@ -136,10 +138,11 @@ class OpenAIProvider(LLMProvider):
                                      or re.search(r'"skill_name"\s*:\s*"([^"]+)"', tool_calls[idx]["arguments"])
                                     )
                                 if m and print_output:
-                                    tool_call_announced[idx]["message"] = f"{name_to_message[name]} {m.group(1)}"
-                                    print(f"\n{" " if tool_calls[idx]["arguments"][-1] != "}" else Color.c("✔", fg = "green")}  "+Color.c(tool_call_announced[idx]["message"], fg = "#adadad"), end="", flush=True)
-                                    tool_call_announced[idx]["status"] = True
-                                    continue
+                                    if name in name_to_message:
+                                        tool_call_announced[idx]["message"] = f"{name_to_message[name]} {m.group(1)}"
+                                        print(f"\n{" " if tool_calls[idx]["arguments"][-1] != "}" else Color.c("✔", fg = "green")}  "+Color.c(tool_call_announced[idx]["message"], fg = "#adadad"), end="", flush=True)
+                                        tool_call_announced[idx]["status"] = True
+                                        continue
                     
                                 # print(tc.function.arguments, end="", flush=True)
             print()

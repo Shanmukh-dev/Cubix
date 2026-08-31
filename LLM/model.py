@@ -34,7 +34,7 @@ class Model:
             try:
                 base_url = self.state.available_providers[provider]["base_url"]
                 apikey = self.state.available_providers[provider]["apikey"]
-                print(apikey)
+                # print(apikey)/
                 if apikey:
                     self.model = self.provider_class(
                         model_id=self.model_id, 

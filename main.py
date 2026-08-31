@@ -53,6 +53,8 @@ Your job is to implement changes directly.
 - list_directory:- Description: Lists all the files and directories at a given path (path of a directory), if the path exists..; Required params: {path: <the path of the directory>}
 - bash:- Description: Executes a shell command in the current working directory.; Required params: {cmd: <the command to run>}
 - read_skill:- Description: Reads the skills from the skills directory and returns a list of skills.; Required params: {skill_name: <name of the skill>}
+- web_fetch:- Description: Gets the web data from any specified url.; Required params: {url: <url to fetch>}
+- web_search:- Description: Searches the web for a given query.; Required params: {query: <search query>}
 
 ## Skill usage
 - Skills are pre-defined instruction that help you perform specific tasks.
@@ -86,6 +88,10 @@ tool_list = [
          param_descriptions={"cmd": "the command to run"}),
     Tool(func=read_skill, name="read_skill", description="Reads the skills from the skills directory and returns a list of skills.",
          param_descriptions={"skill_name": "name of the skill"}),
+    Tool(func=web_fetch, name="web_fetch", description="Gets the web data from any specified url.", 
+        param_descriptions = {"url": "url to fetch.", "timeout": "timout ins seconds for fetching. Defaults to 10 seconds if not provided"}),
+    Tool(func = web_search, name = "web_search", description="Searches the web for a given query.",
+         param_descriptions={"query" : "Search query", "max_results": "Maximum number of results to to be fetched. Defaults to 10 if not provided"})
 ]
 
 

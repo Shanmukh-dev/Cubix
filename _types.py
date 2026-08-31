@@ -34,6 +34,7 @@ class Tool:
         self.description = description
         self.func = func
         self.param_descriptions = param_descriptions or {}
+        # param_desc = func.__doc__.split("parameters:", 1)[0]
 
     async def execute(self, params):
         try:

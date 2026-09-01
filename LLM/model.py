@@ -13,7 +13,8 @@ class Model:
         "openai": OpenAIProvider,
         "groq": OpenAIProvider,
         "nvidia-nim": OpenAIProvider,
-        "openrouter": OpenAIProvider
+        "openrouter": OpenAIProvider,
+        "google-gemini": GeminiProvider
     }
 
     def __init__(self, model_id: str, state: AgentState, instructions: str, tool_list: list[Tool]=[]):
@@ -32,17 +33,26 @@ class Model:
         
         if provider in self.state.available_providers:
             try:
-                base_url = self.state.available_providers[provider]["base_url"]
                 apikey = self.state.available_providers[provider]["apikey"]
+
+                if "base_url" in self.provider_class.expects:
+                    base_url = self.state.available_providers[provider]["base_url"]
                 # print(apikey)/
                 if apikey:
-                    self.model = self.provider_class(
-                        model_id=self.model_id, 
-                        apikey=apikey,
-                        base_url=base_url,  
-                        state=self.state, 
-                        tool_list=self.tool_list)
-                
+                    if "base_url" in self.provider_class.expects:
+                        self.model = self.provider_class(
+                            model_id=self.model_id, 
+                            apikey=apikey,
+                            base_url=base_url,  
+                            state=self.state, 
+                            tool_list=self.tool_list)
+                    else:
+                        self.model = self.provider_class(
+                            model_id=self.model_id, 
+                            apikey=apikey,
+                            state=self.state, 
+                            tool_list=self.tool_list)
+                    
                     print(f"Model initialized with Provider: {provider} and Model: {self.model_id}")
                 else:
                     self.model = None
@@ -84,17 +94,29 @@ class Model:
         provider, id = id.split("/", 1)
         self.model_id = id
         self.provider = provider
+        self.provider_class = self.PROVIDER_MAP.get(provider)
         try:
-            base_url = self.state.available_providers[provider]["base_url"]
             apikey = self.state.available_providers[provider]["apikey"]
-            print(apikey)
+            if self.provider_class and "base_url" in self.provider_class.expects:
+                print(f"Provider {provider} requires base_url)")
+                base_url = self.state.available_providers[provider]["base_url"]
+            
             if apikey:
-                self.model = self.provider_class(
-                    model_id=self.model_id, 
-                    apikey=apikey,
-                    base_url=base_url,  
-                    state=self.state, 
-                    tool_list=self.tool_list)
+                if self.provider_class and "base_url" in self.provider_class.expects:
+
+                    self.model = self.provider_class(
+                        model_id=self.model_id, 
+                        apikey=apikey,
+                        base_url=base_url,  
+                        state=self.state, 
+                        tool_list=self.tool_list)
+                else:
+                    self.model = self.provider_class(
+                        model_id=self.model_id, 
+                        apikey=apikey,
+                        state=self.state, 
+                        tool_list=self.tool_list)
+
             
                 print(f"Model initialized with Provider: {provider} and Model: {self.model_id}")
             else:

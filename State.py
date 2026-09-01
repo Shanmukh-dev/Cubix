@@ -88,7 +88,7 @@ class AgentState:
     
     def build_task_history(self):
         tast_hist = "\n".join(f"- {task}" for task in self.completed_tasks) + "\n\n" + self.current_action_history
-        # print(f"Task history built:\n{tast_hist}\n\n\n\n")
+        print(f"Task history built:\n{tast_hist}\n\n\n\n")
         return tast_hist
 
     def load_session(self, session_id):
@@ -120,6 +120,10 @@ class AgentState:
                     "groq": {
                         "apikey": "",
                         "base_url": "https://api.groq.com/openai/v1"
+                    },
+                    "google-gemini": {
+                        "apikey": "",
+                        # "base_url": "https://generativelanguage.googleapis.com/v1beta/models"
                     }
                 },
             }
@@ -133,7 +137,15 @@ class AgentState:
             # self.available_models = data["available_models"]
             self.available_providers = data["providers"]
         for provider in self.available_providers:
+                
             prov = self.available_providers[provider]
+            if provider == "google-gemini":
+                if prov["apikey"]:
+                    res = requests.get("https://generativelanguage.googleapis.com/v1beta/models", params = {"key": prov["apikey"]})
+                    data = res.json()
+                    model_list = [f"{provider}/{model['name']}" for model in data.get("models", [])]
+                    self.available_models.extend(model_list)
+                    continue
             if prov["apikey"]:
                 res = requests.get(prov["base_url"] + "/models", headers={"Authorization": f"Bearer {prov['apikey']}"})
                 model_list = [f"{provider}/{model['id']}" for model in res.json().get("data", [])]

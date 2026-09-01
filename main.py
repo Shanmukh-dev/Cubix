@@ -127,9 +127,9 @@ def compact():
     old_messages = state.messages[:-19]
     if old_messages:
         summary = asyncio.run(ai.compact_messages(old_messages))
-        if summary["resmonse"]:
+        if summary["response"]:
             state.messages = [ai.model.system_message(
-                "# Summary\n"+summary)] + state.messages[-20:]
+                "# Summary\n"+summary["response"])] + state.messages[-20:]
             state.update_moemory()
     print(f"\r{Color.c("✔", fg="green")} Compacting Complete", flush=True)
 

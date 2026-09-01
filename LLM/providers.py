@@ -17,9 +17,11 @@ from _types import LLMProvider, Tool
 from State import AgentState
 from frontend.term_colors import Color
 from frontend.tui import Spinner
+from google import genai
 
 
 class OpenAIProvider(LLMProvider):
+    expects = ["base_url", "apikey"]
 
     def __init__(self, model_id: str, apikey: str, state: AgentState, tool_list: list[Tool] =[], base_url=None):
         self.base_url = base_url
@@ -228,3 +230,223 @@ class OpenAIProvider(LLMProvider):
 
             tool_dclarations.append(newtool)
         return tool_dclarations
+
+class GeminiProvider(LLMProvider):
+    expects = ["apikey"]
+    def __init__(self, model_id: str, apikey: str, state: AgentState, tool_list: list[Tool] =[]):
+        self.model_id = model_id
+        self.state = state
+        self.tool_declarations = self.build_tool_declarations(tool_list) if tool_list else []
+        self.model = genai.Client(api_key=apikey)
+
+    def _convert_messages_to_contents(self, conversation: list[dict]):
+        contents = []
+        for message in conversation:
+            role = message.get("role", "user")
+            content = message.get("content", "")
+
+            if isinstance(content, (list, tuple)):
+                content = json.dumps(content)
+
+            if role == "assistant":
+                mapped_role = "model"
+            elif role == "tool":
+                mapped_role = "user"
+                content = f"Tool result: {content}"
+            else:
+                mapped_role = "user"
+
+            contents.append({
+                "role": mapped_role,
+                "parts": [{"text": str(content) if content else ""}]
+            })
+        return contents
+
+    async def call_model(self, instructions: str, conversation: list[dict], skills: list[dict] = [], print_output: bool = True, tool_use: bool = True):
+        try:
+            self.state.load_memory()
+            if skills:
+                skill_list = "## Available Skills:\n"
+                for skill in skills:
+                    skill_list += f"""
+<skill>
+    <name>{skill["name"]}</name>
+    <description>{skill["description"]}</description>
+</skill>
+\n"""
+                instructions += f"\n{skill_list}\n"
+
+            instructions += f"\n### **Current Working Directory (CWD)**: **`{self.state.get_cwd()}`**"
+            instructions += f"\n### **Current platform (OS)**: **`{platform()}`**"
+            conversation.insert(0, self.system_message(instructions))
+            if os.path.exists(os.path.join(self.state.get_cwd(), "AGENTS.md")):
+                with open(os.path.join(self.state.get_cwd(), "AGENTS.md")) as f:
+                    agents_md = f.read()
+                conversation.insert(1, self.system_message(f"### **AGENTS.md**:\n{agents_md}"))
+
+            contents = self._convert_messages_to_contents(conversation)
+            config = {}
+            if tool_use and self.tool_declarations:
+                config["tools"] = self.tool_declarations
+
+            stream = self.model.models.generate_content_stream(
+                model=self.model_id,
+                contents=contents,
+                config=config,
+            )
+
+            tool_calls = {}
+            tool_call_announced = {}
+            llm_response = ""
+            spinner = Spinner()
+            frames = itertools.cycle(spinner.spinners["braile-classic"])
+            last_spinner_update = 0
+            last_tool = ""
+
+            for chunk in stream:
+                candidates = getattr(chunk, "candidates", []) or []
+                for candidate in candidates:
+                    parts = getattr(getattr(candidate, "content", None), "parts", []) or []
+                    for part in parts:
+                        if getattr(part, "thought", False):
+                            continue
+
+                        text = getattr(part, "text", None)
+                        if text:
+                            llm_response += text
+                            if print_output:
+                                print(text, end="", flush=True)
+
+                        function_call = getattr(part, "function_call", None)
+                        if function_call:
+                            idx = len(tool_calls)
+                            if idx not in tool_call_announced:
+                                tool_call_announced[idx] = {"status": False, "message": ""}
+
+                            if idx not in tool_calls:
+                                tool_calls[idx] = {
+                                    "id": str(idx),
+                                    "name": "",
+                                    "arguments": ""
+                                }
+
+                            if getattr(function_call, "name", None):
+                                tool_calls[idx]["name"] += getattr(function_call, "name", "")
+                            name = tool_calls[idx]["name"]
+
+                            if getattr(function_call, "args", None):
+                                tool_calls[idx]["arguments"] += json.dumps(getattr(function_call, "args", {}) or {})
+
+                                if tool_call_announced[idx]["status"] and print_output:
+                                    now = time.monotonic()
+                                    if tool_calls[idx]["arguments"][-1] == "}":
+                                        print(f"\r{Color.c('✔', fg='green')}", end="", flush=True)
+                                    elif now - last_spinner_update >= 0.1:
+                                        print(f"\r{next(frames)}", end="", flush=True)
+                                        last_spinner_update = now
+                                    continue
+
+                                name_to_message = {
+                                    "write": "Writing",
+                                    "read": "Reading",
+                                    "edit": "Editing",
+                                    "make_directory": "Creating directory",
+                                    "list_directory": "List directroy",
+                                    "bash": "Running command:",
+                                    "read_skill": "Reading skill:",
+                                    "web_fetch": "Web Fetch:",
+                                    "web_search": "Searchin the web for:"
+                                }
+                                m = (re.search(r'"fname"\s*:\s*"([^"]+)"', tool_calls[idx]["arguments"])
+                                     or re.search(r'"path"\s*:\s*"([^"]+)"', tool_calls[idx]["arguments"])
+                                     or re.search(r'"cmd"\s*:\s*"([^"]+)"', tool_calls[idx]["arguments"])
+                                     or re.search(r'"skill_name"\s*:\s*"([^"]+)"', tool_calls[idx]["arguments"]))
+                                if m and print_output:
+                                    if name in name_to_message:
+                                        tool_call_announced[idx]["message"] = f"{name_to_message[name]} {m.group(1)}"
+                                        print(f"\n{' ' if tool_calls[idx]['arguments'][-1] != '}' else Color.c('✔', fg='green')}  " + Color.c(tool_call_announced[idx]["message"], fg='#adadad'), end="", flush=True)
+                                        tool_call_announced[idx]["status"] = True
+                                        last_tool = name
+                                        continue
+
+            print()
+
+            return {
+                "response": llm_response,
+                "tool_calls": tool_calls,
+                "error": ""
+            }
+        except Exception as e:
+            return {
+                "response": "",
+                "tool_calls": [],
+                "error": str(e),
+            }
+        except KeyboardInterrupt:
+            return {
+                "response": "",
+                "tool_calls": [],
+                "error": "Agent Stopped"
+            }
+
+    def user_message(self, content):
+        return {"role": "user", "parts": [{"text": content}]}
+
+    def assistant_message(self, content: str = "", tool_calls: list[dict] = []):
+        return {"role": "model", "parts": [{"text": content}]}
+
+    def system_message(self, content):
+        return {"role": "user", "parts": [{"text": content}]}
+
+    def tool_message(self, tool_id, content: str) -> dict:
+        """Returns a tool message dictionary"""
+        return {"role": "function", "tool_call_id": tool_id, "parts": [{"text": content}]}
+
+    def build_tool_declarations(self, tools: list[Tool]):
+        tool_declarations = []
+        py_to_json = {
+            str: "string",
+            int: "integer",
+            float: "number",
+            bool: "boolean",
+            list: "array",
+            dict: "object",
+        }
+
+        for tool in tools:
+            sig = inspect.signature(tool.func)
+            props = {}
+            required = []
+
+            for param_name, param in sig.parameters.items():
+                if param_name == "state":
+                    continue
+
+                ann = param.annotation
+                json_type = py_to_json.get(get_origin(ann), "string")
+                if ann is inspect.Parameter.empty:
+                    json_type = "string"
+
+                props[param_name] = {"type": json_type}
+                props[param_name]["description"] = tool.param_descriptions.get(param_name, "")
+
+                if json_type == "array":
+                    args = get_args(ann)
+                    if args:
+                        item_type = py_to_json.get(args[0], "string")
+                        props[param_name]["items"] = {"type": item_type}
+
+                if param.default is inspect.Parameter.empty:
+                    required.append(param_name)
+
+            tool_declarations.append({
+                "name": tool.name,
+                "description": tool.description,
+                "parameters": {
+                    "type": "object",
+                    "properties": props,
+                    "required": required,
+                },
+            })
+
+        return [{"function_declarations": tool_declarations}] if tool_declarations else []

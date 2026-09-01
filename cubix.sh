@@ -1,3 +1,2 @@
-#!/usr/bin/env bash
-set +x
-uv run ~/.cubix/Cubix/main.py
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+uv run --directory "$SCRIPT_DIR/." main.py --cwd "$PWD"

@@ -1,6 +1,6 @@
 import asyncio
 import json
-
+import argparse
 from LLM import Model
 from agent_tools import ToolRegistry
 from _types import Tool
@@ -15,9 +15,6 @@ import subprocess
 
 
 # loading configuration
-
-
-
 
 
 
@@ -302,6 +299,17 @@ def tool_mode():
 
 if __name__ == "__main__":
     # print(json.dumps(state.available_skills, indent=2))
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--cwd", type=str)
+    args = parser.parse_args()
+    cwd_arg = args.cwd
+
+    if cwd_arg:
+        if is_path_exists(cwd_arg):
+            state.set_cwd(cwd_arg)
+            print_agent_message(f"Cwd set to: {cwd_arg}")
+        else:
+            print_agent_message("The provided path does not exist.")
     while True:
         try:
 

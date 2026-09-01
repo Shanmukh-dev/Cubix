@@ -1,2 +1,1 @@
-# cd ~/.cubix/Cubix
-uv run ~/.cubix/Cubix/main.py
+uv run --directory "$PSScriptRoot/." main.py --cwd "$PWD"

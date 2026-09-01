@@ -1,3 +1,2 @@
-
 @echo off
-uv run "%USERPROFILE%\.cubix\Cubix\main.py"
+uv run --directory "%~dp0." main.py --cwd "%CD%"

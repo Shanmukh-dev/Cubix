@@ -122,29 +122,6 @@ class AgentState:
                         "base_url": "https://api.groq.com/openai/v1"
                     }
                 },
-                # "available_models": [
-                #     "nvidia-nim/z-ai/glm-5.2",
-                #     "nvidia-nim/deepseek-ai/deepseek-v4-flash",
-                #     "nvidia-nim/deepseek-ai/deepseek-v4-pro",
-                #     "nvidia-nim/openai/gpt-oss-120b",
-                #     "nvidia-nim/nvidia/nemotron-3-ultra-550b-a55b",
-                #     "groq/llama-3.1-8b-instant",
-                #     "groq/llama-3.3-70b-versatile",
-                #     "groq/openai/gpt-oss-120b",
-                #     "groq/openai/gpt-oss-20b",
-                #     "groq/whisper-large-v3",
-                #     "groq/whisper-large-v3-turbo",
-                #     "groq/compound",
-                #     "groq/compound-mini",
-                #     "groq/canopylabs/orpheus-arabic-saudi",
-                #     "groq/canopylabs/orpheus-v1-english",
-                #     "groq/meta-llama/llama-4-scout-17b-16e-instruct",
-                #     "groq/meta-llama/llama-prompt-guard-2-22m",
-                #     "groq/meta-llama/llama-prompt-guard-2-86m",
-                #     "groq/openai/gpt-oss-safeguard-20b",
-                #     "groq/qwen/qwen3-32b",
-                #     "groq/qwen/qwen3.6-27b"
-                # ]
             }
             with open(Path.home() / ".cubix" / "config.json", "w") as f:
                 json.dump(data, f, indent=2)
@@ -181,7 +158,7 @@ class AgentState:
 
                 skill_matter["path"] = str(global_skill_dir / path)
                 self.available_skills.append(skill_matter)
-        print(self.available_skills)
+        # print(self.available_skills)
 
     def load_project_skills(self):
 

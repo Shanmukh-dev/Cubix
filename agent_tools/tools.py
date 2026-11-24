@@ -166,7 +166,7 @@ def bash(state: AgentState, cmd: str) -> str:
             nonlocal hang_detected
     
             start = time.monotonic()
-            while proc.poll is None:
+            while proc.poll() is None:
                 elapsed = time.monotonic() - start
                 with lock:
                     silent_for = time.monotonic() - last_output_time

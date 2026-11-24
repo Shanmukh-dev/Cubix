@@ -67,7 +67,8 @@ Your job is to implement changes directly.
 
 state = AgentState()
 # state.set_cwd(r"C:\TSSV\ProgrammingAndCoding\CodingAgents\Cubix\src\test\code")
-model = state.available_models[3]
+print(state.available_models[0])
+model = state.available_models[0] if len(state.available_models) != 0 else None
 
 
 tool_list = [
@@ -190,8 +191,9 @@ def parse_commands(query: str):
                     with open(Path.home() / ".cubix" / "config.json", "w") as f:
                         json.dump(data, f, indent=2)
                     # state.load_config()
-                    ai.set_model(model)
                     state.load_config()
+                    model = state.available_models[0]
+                    ai.set_model(model)
                     print_agent_message(Color.c("Login successful", fg="green"))
         elif p == "add-model":
             with open(Path.home() / ".cubix" / "config.json") as f:
@@ -209,7 +211,7 @@ def parse_commands(query: str):
                     state.available_models = data["available_models"]
                     state.load_config()
                     print(
-                        Color.c(f"Model {selected_provider}/{id} added successfully.", fg="greeen"))
+                        Color.c(f"Model {selected_provider}/{id} added successfully.", fg="green"))
         elif p == "load-session":
             if not state.get_cwd():
                 print_agent_message(Color.c("\nPlease select a directory first.\n", fg="yellow"))

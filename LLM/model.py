@@ -7,6 +7,31 @@ import json
 from State import AgentState
 from _types import Tool
 from prompt_toolkit.key_binding import KeyBindings
+from functools import wraps
+
+def login_required(func):
+    def check_login(self):
+        if not self.state.login:
+            print(Color.c("Please login using `/login` first.", fg="yellow"))
+            return False
+        return True
+
+    if inspect.iscoroutinefunction(func):
+        @wraps(func)
+        async def async_wrapper(self, *args, **kwargs):
+            if not check_login(self):
+                return
+            return await func(self, *args, **kwargs)
+
+        return async_wrapper
+
+    @wraps(func)
+    def sync_wrapper(self, *args, **kwargs):
+        if not check_login(self):
+            return
+        return func(self, *args, **kwargs)
+
+    return sync_wrapper
 
 class Model:
     PROVIDER_MAP = {
@@ -22,52 +47,27 @@ class Model:
         self.state = state
         self.state.load_memory()
         self.intructions = instructions
-        provider, id = model_id.split("/", 1)
-        self.model_id = id
-        self.provider = provider
+        if model_id:
+            provider, id = model_id.split("/", 1)
+            self.model_id = id
+            self.provider = provider
+        else:
+            self.model_id = "Login using `/login` to select a model"
+            self.provider = "Login using `/login` first"
         self.tool_list = tool_list
+        self.provider_class = None
         self.kb = KeyBindings()
 
-        self.provider_class = self.PROVIDER_MAP.get(provider)
 
         
-        if provider in self.state.available_providers:
-            try:
-                apikey = self.state.available_providers[provider]["apikey"]
-
-                if "base_url" in self.provider_class.expects:
-                    base_url = self.state.available_providers[provider]["base_url"]
-                # print(apikey)/
-                if apikey:
-                    if "base_url" in self.provider_class.expects:
-                        self.model = self.provider_class(
-                            model_id=self.model_id, 
-                            apikey=apikey,
-                            base_url=base_url,  
-                            state=self.state, 
-                            tool_list=self.tool_list)
-                    else:
-                        self.model = self.provider_class(
-                            model_id=self.model_id, 
-                            apikey=apikey,
-                            state=self.state, 
-                            tool_list=self.tool_list)
-                    
-                    print(f"Model initialized with Provider: {provider} and Model: {self.model_id}")
-                else:
-                    self.model = None
-                    print(Color.c("Provider unvailable", fg="red"))
-                    print(f"Please use /login login before using the provider {provider}")
-            except openai.OpenAIError:
-                self.model = None
-                print(Color.c("Provider unvailable", fg="red"))
-                print(f"Please use /login login before using the provider {provider}")
+        if self.state.login:
+            self.set_model(model_id)
         else:
             self.model = None
             print(Color.c("Provider unvailable", fg="red"))
-            print(f"Please use /login login before using the provider {provider}")
+            print(f"Please use /login login before using the provider {self.provider}")
 
-
+    @login_required
     async def run_model(self):
         # self.state.messages.append(self.model.user_message(prompt))
         actionHistory = {
@@ -90,8 +90,10 @@ class Model:
             self.state.current_execution_mode = "idle"
         return result
 
-    def set_model(self, id: str):
-        provider, id = id.split("/", 1)
+    @login_required
+    def set_model(self, model_id: str):
+        provider, id = model_id.split("/", 1)
+        print(model_id, provider, id)
         self.model_id = id
         self.provider = provider
         self.provider_class = self.PROVIDER_MAP.get(provider)
@@ -129,6 +131,7 @@ class Model:
             print(Color.c("Provider unvailable", fg="red"))
             print(f"Please use /login login before using the provider {provider}")
 
+    @login_required
     async def compact_messages(self, messages):
 
         old_messages = [self.model.system_message("""Your task is to create a summary of the provided conversation.

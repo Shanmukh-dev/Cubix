@@ -42,7 +42,6 @@ Shell commands can be executed directly from the agent prompt interface by start
 - `/get-cwd` - Returns the current working directory path.
 - `/new-session` - Starts a new chat session.
 - `/load-session` - Used to load a previous chat session
-- `/add-model` - Used to add your preffered model from any of the available providers.
 - `/compact` - Used to summarize the current session messages and tool_calls performed. Automatically triggered after a certain threshold number of active messages.
 - `/login` - Used to set up api key for a provider from the list of providers
 - `/clear` - Clears the terminal.
@@ -52,5 +51,6 @@ Shell commands can be executed directly from the agent prompt interface by start
 - `Nvidia NIM`
 - `Groq`
 - `OpenRouter`
+- `Google Gemini`
 
 The support of the other providers will be expanded as the development continues. 

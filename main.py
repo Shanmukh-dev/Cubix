@@ -67,7 +67,7 @@ Your job is to implement changes directly.
 
 state = AgentState()
 # state.set_cwd(r"C:\TSSV\ProgrammingAndCoding\CodingAgents\Cubix\src\test\code")
-print(state.available_models[0])
+# print(state.available_models[0])
 model = state.available_models[0] if len(state.available_models) != 0 else None
 
 
